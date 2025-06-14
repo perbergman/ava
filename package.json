@@ -1,0 +1,22 @@
+{
+  "name": "avalanche-teleporter-demo",
+  "version": "1.0.0",
+  "description": "Avalanche Teleporter cross-chain messaging demo",
+  "main": "test-teleporter-messaging.js",
+  "scripts": {
+    "setup": "./setup-avalanche-teleporter.sh",
+    "test": "node test-teleporter-messaging.js",
+    "shutdown": "./shutdown-avalanche.sh",
+    "listen": "node teleporter-listener.js",
+    "send": "node teleporter-sender.js",
+    "send:server": "node teleporter-sender.js --server",
+    "monitor": "node teleporter-websocket-relay.js"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0"
+  },
+  "optionalDependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
+  }
+}

@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Network configuration (contains private keys)
+network-config.json
+
+# Avalanche data
+avalanche-data/
+~/avalanche-data/
+
+# Local node data
+local/
+nodes/
+runs/
+snapshots/
+
+# Logs
+logs/
+*.log
+
+# Archives
+*.tar.gz
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Environment variables
+.env
+
+# Temporary files
+*.tmp
+*.temp
+
+.claude/
