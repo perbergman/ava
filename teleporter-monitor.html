@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teleporter Message Monitor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #333; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .messages { margin-top: 20px; }
+        .message { padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 4px solid #007bff; background: #f8f9fa; }
+        .message-sent { border-left-color: #28a745; }
+        .message-received { border-left-color: #17a2b8; }
+        .network { font-weight: bold; color: #495057; }
+        .timestamp { color: #6c757d; font-size: 0.9em; }
+        .stats { display: flex; gap: 20px; margin: 20px 0; }
+        .stat-box { flex: 1; padding: 15px; background: #e9ecef; border-radius: 4px; text-align: center; }
+        .stat-value { font-size: 2em; font-weight: bold; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Teleporter Message Monitor</h1>
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="totalMessages">0</div>
+                <div>Total Messages</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="messagesPerMinute">0</div>
+                <div>Messages/Minute</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="activeNetworks">0</div>
+                <div>Active Networks</div>
+            </div>
+        </div>
+        
+        <div class="messages">
+            <h2>Recent Messages</h2>
+            <div id="messageList"></div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8080');
+        const messageList = document.getElementById('messageList');
+        const statusDiv = document.getElementById('status');
+        let messageCount = 0;
+        let messageTimestamps = [];
+
+        ws.onopen = () => {
+            statusDiv.textContent = 'Connected';
+            statusDiv.className = 'status connected';
+            ws.send(JSON.stringify({ type: 'get_stats' }));
+        };
+
+        ws.onclose = () => {
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.className = 'status disconnected';
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'message_sent' || data.type === 'message_received') {
+                messageCount++;
+                messageTimestamps.push(Date.now());
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message ' + data.type.replace('_', '-');
+                
+                const icon = data.type === 'message_sent' ? '📤' : '📨';
+                const action = data.type === 'message_sent' ? 'sent to' : 'received from';
+                const otherChain = data.type === 'message_sent' ? data.destinationChain : data.sourceChain;
+                
+                messageDiv.innerHTML = `
+                    <div>${icon} <span class="network">${data.network}</span> ${action} ${otherChain}</div>
+                    <div>Message: "${data.data.message}"</div>
+                    <div class="timestamp">${new Date(data.timestamp).toLocaleString()}</div>
+                `;
+                
+                messageList.insertBefore(messageDiv, messageList.firstChild);
+                
+                // Keep only last 50 messages
+                while (messageList.children.length > 50) {
+                    messageList.removeChild(messageList.lastChild);
+                }
+                
+                updateStats();
+            } else if (data.type === 'stats') {
+                document.getElementById('totalMessages').textContent = data.totalMessages;
+                document.getElementById('activeNetworks').textContent = Object.keys(data.networks).length;
+            } else if (data.type === 'history') {
+                // Display historical messages
+                data.messages.forEach(msg => {
+                    ws.onmessage({ data: JSON.stringify(msg) });
+                });
+            }
+        };
+
+        function updateStats() {
+            document.getElementById('totalMessages').textContent = messageCount;
+            
+            // Calculate messages per minute
+            const now = Date.now();
+            const oneMinuteAgo = now - 60000;
+            const recentMessages = messageTimestamps.filter(ts => ts > oneMinuteAgo).length;
+            document.getElementById('messagesPerMinute').textContent = recentMessages;
+        }
+
+        // Update stats every 5 seconds
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'get_stats' }));
+                updateStats();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
